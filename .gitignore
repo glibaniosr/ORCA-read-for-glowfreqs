@@ -1,0 +1,12 @@
+# VS Code files
+launch.json
+
+# Example folders
+example-gaussian
+example-orca
+
+# Program used file extensions
+*.hess
+*.info
+*.out
+*.log
