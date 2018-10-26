@@ -2,28 +2,40 @@
 # Made by Gabriel L. S. Rodrigues for use with the glofreqs program cited below:
 # Gannon, Glowacki et al., Faraday Discussions, 2010, 147, 173-188
 
-import sys
-import re
-import os
+import sys, re, os, getopt
 
+s_version = "1.0.0"
 #--- Utility Functions
 # Function to construct an array
 def make_array(r,c):
   array = [[0 for col in range(c)] for row in range(r)]
   return array
-
 #--- END of Functions
 
-#--- Variables
-## Files
-hfile_base, hfile_ext = os.path.splitext(sys.argv[1])
-hess_file = hfile_base+hfile_ext
-gfile_base, gfile_ext = os.path.splitext(sys.argv[2])
-grad_file = gfile_base+gfile_ext
-info_file = hess_file+".info"
-## Calculation Parameters
-
-#--- END of variables
+# Getopt Parameters
+usage = "Usage: orcaread.py -i hess_file.hess -g grad_file.engrad"
+try:
+    opts, args = getopt.getopt(sys.argv[1:], 'i:g:o:hv', ['hess=', 'grad=', 'help', 'version'])
+except getopt.GetoptError:
+    print(usage)
+    sys.exit(2)
+for opt, arg in opts:
+    if opt in ('-h', '--help'):
+        print(usage)
+        sys.exit(2)
+    if opt in ('-v', '--version'):
+        print("ORCA read to glowfreq Version {:s}".format(s_version))
+        sys.exit(2)
+    elif opt in ('-i', '--hess'):
+        hess_file = arg
+        hfile_base, hfile_ext = os.path.splitext(hess_file)
+        info_file = hfile_base+".info"
+    elif opt in ('-g', '--grad'):
+        grad_file = arg
+        gfile_base, gfile_ext = os.path.splitext(grad_file)
+    else:
+        print(usage)
+        sys.exit(2)
 
 #--- Get the HESSIAN matrix and some parameters
 ## Store the entire Hessian in memory from the .hess ORCA file
@@ -32,7 +44,7 @@ with open(hess_file, 'r') as inp:
         if not "$hessian" in line: # Flag for the Hessian group
             continue
         else:
-            ## Get the Hessian size
+            ## Get the Hessian size and other parameters
             # ORCA prints the Hessian in text with all lines from 5 columns each time.
             # Therefore, it will be printed n5_sets = hess_size//5 sets with hess_size number of lines.
             # In the last set will be printed rest = hess_size%5 columns with hess_size lines.
@@ -123,21 +135,40 @@ with open(grad_file, 'r') as inp:
                     grad_data[nline] = [ xyz_data[nline][0], float(xyz_temp[0]), float(xyz_temp[1]), float(xyz_temp[2]) ]
                     xyz_temp = []
 
-
-
-
-
-
-#--- Write the Hessian to the file (only bottom elements, hence Hij with i<j)
-# with open(info_file, 'w'):
-#     n_line = 0
-#     while n_line < hess_size:
-#         line = [ "{:10.8f}".format(element) for element in hess_data[n_line] ]
-#         i = 0
-#         j = 0
-#         #while i <= j:
-
-        
-        
-#         print("\n")
-#         n_line += 1
+#--- Write the data in the information file
+with open(info_file, 'w') as out:
+    ## Number of atoms
+    out.writelines(hfile_base+": Number of atoms\n"+str(n_atoms)+"\n")
+    ## Standard orientation
+    out.writelines(hfile_base+": Standard orientation (Bohr)\n")
+    for line in xyz_data:
+        for idx,element in enumerate(line):
+            if idx == 0:
+                out.writelines(str(element).ljust(4))
+            else:
+                out.writelines(str("{:.8f}".format(element)).rjust(20))
+        out.writelines("\n")
+    ## Hessian
+    # Only the half of the diagonal Hessian must be outputed
+    out.writelines(hfile_base+": Hessian (Hartree/Bohr^2)")
+    for i,line in enumerate(hess_data):
+        for j,element in enumerate(line):
+            if j == 0:
+                continue
+            elif j > i+1:
+                break
+            elif j%4 == 1:
+                out.writelines("\n"+str(line[0]).rjust(4))
+                out.writelines(str("{:.8f}".format(element)).rjust(20))
+            else:
+                out.writelines(str("{:.8f}".format(element)).rjust(20))
+    out.writelines("\n")
+    ## Gradient
+    out.writelines(hfile_base+": Gradient (Hartree/Bohr)\n") 
+    for line in grad_data:
+        for idx,element in enumerate(line):
+            if idx == 0:
+                out.writelines(str(element).ljust(4))
+            else:
+                out.writelines(str("{:.8f}".format(element)).rjust(20))
+        out.writelines("\n")
