@@ -4,7 +4,7 @@
 
 import sys, re, os, getopt
 
-s_version = "1.0.0"
+s_version = "1.0.1"
 #--- Utility Functions
 # Function to construct an array
 def make_array(r,c):
@@ -48,15 +48,16 @@ with open(hess_file, 'r') as inp:
             # ORCA prints the Hessian in text with all lines from 5 columns each time.
             # Therefore, it will be printed n5_sets = hess_size//5 sets with hess_size number of lines.
             # In the last set will be printed rest = hess_size%5 columns with hess_size lines.
+            # OBS: From version 4.1.2, ORCA started to print the Hessian in sets of 6 columns
             for data in inp:
                 ##--- Important Parameters
                 hess_size = int(data.strip())
                 n_atoms = int(hess_size/3)
-                n5_sets = hess_size//5 # Number of 5 columns sets. 
-                rest = hess_size%5
+                n5_sets = hess_size//6 # Number of 5 columns sets. 
+                rest = hess_size%6
                 if rest == 0:
                     n5_sets = n5_sets-1 # If the size is divisible by 5, then the sets would be larger.
-                    rest = 5
+                    rest = 6
                 ## Create the HESSIAN array
                 hess_data = make_array(hess_size,hess_size+1)
                 ## Write the number of the output line in the first element of the hess_data matrix
